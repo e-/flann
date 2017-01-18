@@ -167,7 +167,7 @@ public:
             }
         }        
         
-        float div = (float)size_ * std::log2(size_);
+        float div = (float)size_ * std::log(size_) / 0.693147f;
         for(int j = 0; j < trees_; j++){
             float inbalance = (float)depth_sums_[j] / div; 
 //            std::cout << inbalance << ' ';
@@ -731,12 +731,12 @@ private:
 
         /* Search once through each tree down to root. */
         for (i = 0; i < trees_; ++i) {
-            searchLevel<with_removed>(result, vec, tree_roots_[i], 0, i, checkCount, maxCheck, epsError, heap, checked);
+            searchLevel<with_removed>(result, vec, tree_roots_[i]/*, 0*/, i, checkCount, maxCheck, epsError, heap, checked);
         }
 
         /* Keep searching other branches from heap until finished. */
         while ( heap->popMin(branch) && (checkCount < maxCheck || !result.full() )) {
-            searchLevel<with_removed>(result, vec, branch.node, branch.mindist, branch.tree, checkCount, maxCheck, epsError, heap, checked);
+            searchLevel<with_removed>(result, vec, branch.node, branch.mindist/*, branch.tree*/, checkCount, maxCheck, epsError, heap, checked);
         }
 
         delete heap;
@@ -759,7 +759,7 @@ private:
      *  at least "mindistsq".
      */
     template<bool with_removed>
-    void searchLevel(ResultSet<DistanceType>& result_set, const ElementType* vec, NodePtr node, DistanceType mindist, int tree, int& checkCount, int maxCheck,
+    void searchLevel(ResultSet<DistanceType>& result_set, const ElementType* vec, NodePtr node, DistanceType mindist/*, int tree*/, int& checkCount, int maxCheck,
                      float epsError, Heap<BranchSt>* heap, DynamicBitset& checked) const
     {
         if (result_set.worstDist()<mindist) {
@@ -779,7 +779,7 @@ private:
             checkCount++;
 
             DistanceType dist = distance_(node->point, vec, veclen_);
-            result_set.addPoint(dist,index,tree);
+            result_set.addPoint(dist,index/*,tree*/);
             return;
         }
 
@@ -800,11 +800,11 @@ private:
         DistanceType new_distsq = mindist + distance_.accum_dist(val, node->divval, node->divfeat);
         //		if (2 * checkCount < maxCheck  ||  !result.full()) {
         if ((new_distsq*epsError < result_set.worstDist())||  !result_set.full()) {
-            heap->insert( BranchSt(otherChild, new_distsq,tree) );
+            heap->insert( BranchSt(otherChild, new_distsq/*,tree*/) );
         }
 
         /* Call recursively to search next level down. */
-        searchLevel<with_removed>(result_set, vec, bestChild, mindist, tree, checkCount, maxCheck, epsError, heap, checked);
+        searchLevel<with_removed>(result_set, vec, bestChild, mindist/*, tree*/, checkCount, maxCheck, epsError, heap, checked);
     }
 
     /**

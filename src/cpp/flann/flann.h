@@ -75,6 +75,10 @@ struct FLANNParameters
     /* other parameters */
     enum flann_log_level_t log_level;    /* determines the verbosity of each flann function */
     long random_seed;            /* random seed to use */
+    
+    /* balanced kdtree parameters */
+    float rebalance_threshold;
+    int split_criteria;
 };
 
 

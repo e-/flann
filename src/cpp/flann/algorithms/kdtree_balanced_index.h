@@ -38,6 +38,7 @@
 #include <stdarg.h>
 #include <cmath>
 #include <iostream>
+#include <cmath>
 
 #include "flann/general.h"
 #include "flann/algorithms/nn_index.h"
@@ -55,10 +56,12 @@ namespace flann
 
 struct KDTreeBalancedIndexParams : public IndexParams
 {
-    KDTreeBalancedIndexParams(int trees = 4)
+    KDTreeBalancedIndexParams(int trees = 4, float rebalance_threshold = 1.1f, int split_criteria = FLANN_MEAN)
     {
         (*this)["algorithm"] = FLANN_INDEX_KDTREE_BALANCED;
         (*this)["trees"] = trees;
+        (*this)["rebalance_threshold"] = rebalance_threshold;
+        (*this)["split_criteria"] = split_criteria;
     }
 };
 
@@ -80,7 +83,6 @@ public:
 
     typedef bool needs_kdtree_distance;
 
-
     /**
      * KDTreeBalanced constructor
      *
@@ -91,8 +93,9 @@ public:
     KDTreeBalancedIndex(const IndexParams& params = KDTreeBalancedIndexParams(), Distance d = Distance() ) :
     	BaseClass(params, d), mean_(NULL), var_(NULL)
     {
-        std::cout << "what?" << std::endl;
         trees_ = get_param(index_params_,"trees",4);
+        rebalance_threshold_ = get_param(index_params_,"rebalance_threshold", 1.1f);
+        split_criteria_ = get_param(index_params_,"split_cliteria", FLANN_MEAN);
     }
 
 
@@ -106,8 +109,9 @@ public:
     KDTreeBalancedIndex(const Matrix<ElementType>& dataset, const IndexParams& params = KDTreeBalancedIndexParams(),
                 Distance d = Distance() ) : BaseClass(params,d ), mean_(NULL), var_(NULL)
     {
-        std::cout << "what?" << std::endl;
         trees_ = get_param(index_params_,"trees",4);
+        rebalance_threshold_ = get_param(index_params_,"rebalance_threshold", 1.1f);
+        split_criteria_ = get_param(index_params_,"split_cliteria", FLANN_MEAN);
 
         setDataset(dataset);
     }
@@ -116,6 +120,7 @@ public:
     		trees_(other.trees_)
     {
         tree_roots_.resize(other.tree_roots_.size());
+        //hits_.resize(other.tree_roots_.size());
         for (size_t i=0;i<tree_roots_.size();++i) {
         	copyTree(tree_roots_[i], other.tree_roots_[i]);
         }
@@ -149,17 +154,30 @@ public:
         size_t old_size = size_;
         extendDataset(points);
         
-        if (rebuild_threshold>1 && size_at_build_*rebuild_threshold<size_) {
+/*        if (rebuild_threshold>1 && size_at_build_*rebuild_threshold<size_) {
             buildIndex();
         }
-        else {
-            for (size_t i=old_size;i<size_;++i) {
-                for (int j = 0; j < trees_; j++) {
-                    addPointToTree(tree_roots_[j], i);
+        else */{
+            for (int j = 0; j < trees_; j++) {
+                for (size_t i=old_size;i<size_;++i) {
+                    int depth = addPointToTree(tree_roots_[j], i);
+
+                    depth_sums_[j] += depth;
                 }
             }
         }        
+        
+        float div = (float)size_ * std::log2(size_);
+        for(int j = 0; j < trees_; j++){
+            float inbalance = (float)depth_sums_[j] / div; 
+//            std::cout << inbalance << ' ';
+            if(inbalance > rebalance_threshold_) {
+              buildOneIndexImpl(j);
+            }
+        }
+//        std::cout << std::endl;
     }
+
 
     flann_algorithm_t getType() const
     {
@@ -249,7 +267,6 @@ public:
     }
 
 protected:
-
     /**
      * Builds the index
      */
@@ -265,12 +282,50 @@ protected:
         var_ = new DistanceType[veclen_];
 
         tree_roots_.resize(trees_);
+        //hits_.resize(trees_);
+        /*delete hits_;
+        hits_ = new int[trees_];
+        for(size_t i = 0; i < trees_; ++i) hits_[i] = 0;
+       */
+
+        delete depth_sums_; 
+        depth_sums_ = new int[trees_];
+        for(size_t i = 0; i < trees_; ++i) depth_sums_[i] = 0;
+
         /* Construct the randomized trees. */
         for (int i = 0; i < trees_; i++) {
             /* Randomize the order of vectors to allow for unbiased sampling. */
             std::random_shuffle(ind.begin(), ind.end());
-            tree_roots_[i] = divideTree(&ind[0], int(size_) );
+            int depth_sum = 0;
+            tree_roots_[i] = divideTree(&ind[0], int(size_), depth_sum);
+            depth_sums_[i] = depth_sum;
         }
+        delete[] mean_;
+        delete[] var_;
+    }
+
+    /**
+     * Builds the n-th index
+     */
+    void buildOneIndexImpl(int n)
+    {
+        // Create a permutable array of indices to the input vectors.
+    	  std::vector<int> ind(size_);
+        for (size_t i = 0; i < size_; ++i) {
+            ind[i] = int(i);
+        }
+
+        mean_ = new DistanceType[veclen_];
+        var_ = new DistanceType[veclen_];
+
+        depth_sums_[n] = 0;
+          
+        /* Randomize the order of vectors to allow for unbiased sampling. */
+        std::random_shuffle(ind.begin(), ind.end());
+        int depth_sum = 0;
+        tree_roots_[n] = divideTree(&ind[0], int(size_), depth_sum);
+        depth_sums_[n] = depth_sum;
+        
         delete[] mean_;
         delete[] var_;
     }
@@ -293,61 +348,63 @@ private:
     	/**
          * Dimension used for subdivision.
          */
-        int divfeat;
+      int divfeat;
         /**
          * The values used for subdivision.
          */
-        DistanceType divval;
+      DistanceType divval;
         /**
          * Point data
          */
-        ElementType* point;
-		/**
-		* The child nodes.
-		*/
-		Node* child1, *child2;
-		Node(){
-			child1 = NULL;
-			child2 = NULL;
-		}
-		~Node() {
-			if (child1 != NULL) { child1->~Node(); child1 = NULL; }
+      ElementType* point;
+      /**
+      * The child nodes.
+      */
+      Node* child1, *child2;
+      int children;
+      Node(){
+        child1 = NULL;
+        child2 = NULL;
+        children = 0;
+      }
+      ~Node() {
+        if (child1 != NULL) { child1->~Node(); child1 = NULL; }
 
-			if (child2 != NULL) { child2->~Node(); child2 = NULL; }
-		}
+        if (child2 != NULL) { child2->~Node(); child2 = NULL; }
+      }
 
-    private:
-    	template<typename Archive>
-    	void serialize(Archive& ar)
-    	{
-    		typedef KDTreeBalancedIndex<Distance> Index;
-    		Index* obj = static_cast<Index*>(ar.getObject());
+      private:
+      template<typename Archive>
+      void serialize(Archive& ar)
+      {
+        typedef KDTreeBalancedIndex<Distance> Index;
+        Index* obj = static_cast<Index*>(ar.getObject());
 
-    		ar & divfeat;
-    		ar & divval;
+        ar & divfeat;
+        ar & divval;
 
-    		bool leaf_node = false;
-    		if (Archive::is_saving::value) {
-    			leaf_node = ((child1==NULL) && (child2==NULL));
-    		}
-    		ar & leaf_node;
+        bool leaf_node = false;
+        if (Archive::is_saving::value) {
+          leaf_node = ((child1==NULL) && (child2==NULL));
+        }
+        ar & leaf_node;
 
-    		if (leaf_node) {
-    			if (Archive::is_loading::value) {
-    				point = obj->points_[divfeat];
-    			}
-    		}
+        if (leaf_node) {
+          if (Archive::is_loading::value) {
+            point = obj->points_[divfeat];
+          }
+        }
 
-    		if (!leaf_node) {
-				if (Archive::is_loading::value) {
-					child1 = new(obj->pool_) Node();
-					child2 = new(obj->pool_) Node();
-				}
-    			ar & *child1;
-    			ar & *child2;
-    		}
-    	}
-    	friend struct serialization::access;
+        if (!leaf_node) {
+        if (Archive::is_loading::value) {
+          child1 = new(obj->pool_) Node();
+          child2 = new(obj->pool_) Node();
+        }
+          ar & *child1;
+          ar & *child2;
+        }
+      }
+      friend struct serialization::access;
     };
     typedef Node* NodePtr;
     typedef BranchStruct<NodePtr, DistanceType> BranchSt;
@@ -369,7 +426,39 @@ private:
     		copyTree(dst->child2, src->child2);
     	}
     }
+/*
+    void rebalance(NodePtr node) 
+    {
+        //std::cerr << "rabalancing on " << node << ' ' << node -> children << " left: " << node -> child1 -> children << " right: " << node -> child2 -> children << std::endl;
+        // Create a permutable array of indices to the input vectors.
+    	  std::vector<int> ind(node -> children);
+        getAllChildrenIndices(node, ind);
 
+        mean_ = new DistanceType[veclen_];
+        var_ = new DistanceType[veclen_];
+
+        std::random_shuffle(ind.begin(), ind.end());
+//        std::cerr << "divide tree beginning on" << node << ' ' << node -> children << std::endl;
+        divideTreeFromNode(node, &ind[0], node -> children);
+        
+//        std::cerr << "after rabalancing on " << node << ' ' << node -> children << " left: " << node -> child1 -> children << " right: " << node -> child2 -> children << std::endl;
+        
+        delete[] mean_;
+        delete[] var_;
+    }
+
+    void getAllChildrenIndices(NodePtr node, std::vector<int> &indices) 
+    {
+//        std::cerr << "get all children indices on" << node << std::endl;
+        if(node -> child1 == NULL && node -> child2 == NULL) {
+            indices.push_back(node -> divfeat);
+        }  
+        else {
+            getAllChildrenIndices(node -> child1, indices);
+            getAllChildrenIndices(node -> child2, indices);
+        }
+    }
+*/
     /**
      * Create a tree node that subdivides the list of vecs from vind[first]
      * to vind[last].  The routine is called recursively on each sublist.
@@ -379,14 +468,44 @@ private:
      *                  first = index of the first vector
      *                  last = index of the last vector
      */
-    NodePtr divideTree(int* ind, int count)
+    NodePtr divideTree(int* ind, int count, int &depth_sum)
     {
         NodePtr node = new(pool_) Node(); // allocate memory
-
+        depth_sum += count;
         /* If too few exemplars remain, then make this a leaf node. */
         if (count == 1) {
             node->child1 = node->child2 = NULL;    /* Mark as leaf node. */
+            node -> children = 1;
             node->divfeat = *ind;    /* Store index of this vec. */
+            node->point = points_[*ind];
+        }
+        else {
+            int idx;
+            int cutfeat;
+            DistanceType cutval;
+            if(split_criteria_ == FLANN_MEAN) 
+                meanSplit(ind, count, idx, cutfeat, cutval);
+            else
+                medianSplit(ind, count, idx, cutfeat, cutval);
+
+            node->divfeat = cutfeat;
+            node->divval = cutval;
+            node->children = count;
+//            std::cerr << "divide tree count = " << count << " into (" << idx << "," << count - idx << ")"<< std::endl;
+            node->child1 = divideTree(ind, idx, depth_sum);
+            node->child2 = divideTree(ind+idx, count-idx, depth_sum);
+        }
+
+        return node;
+    }
+/*
+    void divideTreeFromNode(NodePtr node, int* ind, int count)
+    {
+        // If too few exemplars remain, then make this a leaf node. 
+        if (count == 1) {
+            node->child1 = node->child2 = NULL;    // Mark as leaf node. 
+            node->children = 1;
+            node->divfeat = *ind;    // Store index of this vec. 
             node->point = points_[*ind];
         }
         else {
@@ -397,14 +516,13 @@ private:
 
             node->divfeat = cutfeat;
             node->divval = cutval;
-            node->child1 = divideTree(ind, idx);
-            node->child2 = divideTree(ind+idx, count-idx);
+            node->children = count;
+//            std::cerr << "divide tree from node count = " << count << " into (" << idx << "," << count - idx << ")"<< std::endl;
+     //       node->child1 = divideTree(ind, idx);
+       //     node->child2 = divideTree(ind+idx, count-idx);
         }
-
-        return node;
     }
-
-
+  */  
     /**
      * Choose which feature to use in order to subdivide this set of vectors.
      * Make a random choice among those with the highest variance, and use
@@ -443,6 +561,65 @@ private:
         cutval = mean_[cutfeat];
 
         int lim1, lim2;
+        // sort 
+        // *  dataset[ind[0..lim1-1]][cutfeat]<cutval
+        // *  dataset[ind[lim1..lim2-1]][cutfeat]==cutval
+        // *  dataset[ind[lim2..count]][cutfeat]>cutval
+        planeSplit(ind, count, cutfeat, cutval, lim1, lim2);
+
+        if (lim1>count/2) index = lim1;
+        else if (lim2<count/2) index = lim2;
+        else index = count/2;
+
+        /* If either list is empty, it means that all remaining features
+         * are identical. Split in the middle to maintain a balanced tree.
+         */
+        if ((lim1==count)||(lim2==0)) index = count/2;
+    }
+
+    /**
+     * Choose which feature to use in order to subdivide this set of vectors.
+     * Make a random choice among those with the highest variance, and use
+     * its variance as the threshold value.
+     */
+    void medianSplit(int* ind, int count, int& index, int& cutfeat, DistanceType& cutval)
+    {
+        memset(mean_,0,veclen_*sizeof(DistanceType));
+        memset(var_,0,veclen_*sizeof(DistanceType));
+
+        /* Compute mean values.  Only the first SAMPLE_MEAN values need to be
+            sampled to get a good estimate.
+         */
+        int cnt = std::min((int)SAMPLE_MEAN+1, count);
+        std::vector<ElementType> arr;
+        for (size_t k=0; k<veclen_; ++k) {
+            arr.clear();
+            for (int j = 0; j < cnt; ++j) {
+                ElementType* v = points_[ind[j]];
+                arr.push_back(v[k]);
+            }
+
+            std::nth_element(arr.begin(), arr.begin() + cnt / 2, arr.end());
+            mean_[k] = arr[cnt / 2];
+        }
+
+        /* Compute MAD (median absolute error) (no need to divide by count). */
+        for (int j = 0; j < cnt; ++j) {
+            ElementType* v = points_[ind[j]];
+            for (size_t k=0; k<veclen_; ++k) {
+                DistanceType dist = std::abs(v[k] - mean_[k]);
+                var_[k] += dist;
+            }
+        }
+        /* Select one of the highest variance indices at random. */
+        cutfeat = selectDivision(var_);
+        cutval = mean_[cutfeat];
+
+        int lim1, lim2;
+        // sort 
+        // *  dataset[ind[0..lim1-1]][cutfeat]<cutval
+        // *  dataset[ind[lim1..lim2-1]][cutfeat]==cutval
+        // *  dataset[ind[lim2..count]][cutfeat]>cutval
         planeSplit(ind, count, cutfeat, cutval, lim1, lim2);
 
         if (lim1>count/2) index = lim1;
@@ -554,16 +731,26 @@ private:
 
         /* Search once through each tree down to root. */
         for (i = 0; i < trees_; ++i) {
-            searchLevel<with_removed>(result, vec, tree_roots_[i], 0, checkCount, maxCheck, epsError, heap, checked);
+            searchLevel<with_removed>(result, vec, tree_roots_[i], 0, i, checkCount, maxCheck, epsError, heap, checked);
         }
 
         /* Keep searching other branches from heap until finished. */
         while ( heap->popMin(branch) && (checkCount < maxCheck || !result.full() )) {
-            searchLevel<with_removed>(result, vec, branch.node, branch.mindist, checkCount, maxCheck, epsError, heap, checked);
+            searchLevel<with_removed>(result, vec, branch.node, branch.mindist, branch.tree, checkCount, maxCheck, epsError, heap, checked);
         }
 
         delete heap;
-
+/*
+        std::vector<int> dd;
+        result.getTrees(dd);
+        for(size_t i = 0; i < dd.size(); ++i) {
+          hits_[dd[i]]= hits_[dd[i]] + 1;
+        }
+*/
+/*        for(size_t i = 0; i < trees_; ++i) {
+          std::cout << hits_[i] << ' ';
+        }
+        std::cout << std::endl;*/
     }
 
     /**
@@ -572,7 +759,7 @@ private:
      *  at least "mindistsq".
      */
     template<bool with_removed>
-    void searchLevel(ResultSet<DistanceType>& result_set, const ElementType* vec, NodePtr node, DistanceType mindist, int& checkCount, int maxCheck,
+    void searchLevel(ResultSet<DistanceType>& result_set, const ElementType* vec, NodePtr node, DistanceType mindist, int tree, int& checkCount, int maxCheck,
                      float epsError, Heap<BranchSt>* heap, DynamicBitset& checked) const
     {
         if (result_set.worstDist()<mindist) {
@@ -592,7 +779,7 @@ private:
             checkCount++;
 
             DistanceType dist = distance_(node->point, vec, veclen_);
-            result_set.addPoint(dist,index);
+            result_set.addPoint(dist,index,tree);
             return;
         }
 
@@ -613,11 +800,11 @@ private:
         DistanceType new_distsq = mindist + distance_.accum_dist(val, node->divval, node->divfeat);
         //		if (2 * checkCount < maxCheck  ||  !result.full()) {
         if ((new_distsq*epsError < result_set.worstDist())||  !result_set.full()) {
-            heap->insert( BranchSt(otherChild, new_distsq) );
+            heap->insert( BranchSt(otherChild, new_distsq,tree) );
         }
 
         /* Call recursively to search next level down. */
-        searchLevel<with_removed>(result_set, vec, bestChild, mindist, checkCount, maxCheck, epsError, heap, checked);
+        searchLevel<with_removed>(result_set, vec, bestChild, mindist, tree, checkCount, maxCheck, epsError, heap, checked);
     }
 
     /**
@@ -662,10 +849,11 @@ private:
         }
     }
     
-    void addPointToTree(NodePtr node, int ind)
+    int addPointToTree(NodePtr node, int ind)
     {
         ElementType* point = points_[ind];
         
+        // leaf 
         if ((node->child1==NULL) && (node->child2==NULL)) {
             ElementType* leaf_point = node->point;
             ElementType max_span = 0;
@@ -697,15 +885,28 @@ private:
             node->divfeat = div_feat;
             node->divval = (point[div_feat]+leaf_point[div_feat])/2;
             node->child1 = left;
-            node->child2 = right;            
+            node->child2 = right;
+
+/*            left -> children = 1;
+            right -> children = 1;
+            node -> children = 2;*/
+            return 2; 
         }
         else {
             if (point[node->divfeat]<node->divval) {
-                addPointToTree(node->child1,ind);
+                return addPointToTree(node->child1,ind) + 1;
             }
             else {
-                addPointToTree(node->child2,ind);                
+                return addPointToTree(node->child2,ind) + 1; 
             }
+
+            /*int children1 = node -> child1 -> children;
+            int children2 = node -> child2 -> children;
+            node -> children = children1 + children2;
+            if(node -> children > rebalance_nodes_ && 
+                (children1 > children2 * rebalance_ratio_ || children2 > children1 * rebalance_ratio_)) {
+                rebalance_ = node;
+            }*/
         }
     }
 private:
@@ -734,7 +935,7 @@ private:
          * selected at random from among the top RAND_DIM dimensions with the
          * highest variance.  A value of 5 works well.
          */
-        RAND_DIM=5
+        RAND_DIM = 5
     };
 
 
@@ -742,6 +943,8 @@ private:
      * Number of randomized trees that are used
      */
     int trees_;
+    float rebalance_threshold_;
+    int split_criteria_;
 
     DistanceType* mean_;
     DistanceType* var_;
@@ -750,7 +953,8 @@ private:
      * Array of k-d trees used to find neighbours.
      */
     std::vector<NodePtr> tree_roots_;
-
+    //int *hits_ = NULL;
+    int *depth_sums_ = NULL;
     /**
      * Pooled memory allocator.
      *

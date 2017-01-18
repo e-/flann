@@ -149,6 +149,11 @@ enum flann_checks_t {
     FLANN_CHECKS_AUTOTUNED = -2,
 };
 
+enum flann_split_criteria { 
+    FLANN_MEAN = 1,
+    FLANN_MEDIAN = 2
+};
+
 #ifdef __cplusplus
 }
 #endif

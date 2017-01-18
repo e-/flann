@@ -51,9 +51,13 @@ struct BranchStruct
 {
     T node;           /* Tree node at which search resumes */
     DistanceType mindist;     /* Minimum distance to query for all nodes below. */
+    int tree; // tree index
 
     BranchStruct() {}
-    BranchStruct(const T& aNode, DistanceType dist) : node(aNode), mindist(dist) {}
+    BranchStruct(const T& aNode, DistanceType dist) : node(aNode), mindist(dist), tree(0) {}
+    
+    BranchStruct(const T& aNode, DistanceType dist, int t) : node(aNode), mindist(dist), tree(t) {}
+    
 
     bool operator<(const BranchStruct<T, DistanceType>& rhs) const
     {
@@ -66,15 +70,22 @@ template <typename DistanceType>
 struct DistanceIndex
 {
     DistanceIndex(DistanceType dist, size_t index) :
-        dist_(dist), index_(index)
+        dist_(dist), index_(index), tree_(0)
     {
     }
+
+    DistanceIndex(DistanceType dist, size_t index, int tree) :
+        dist_(dist), index_(index), tree_(tree)
+    {
+    }
+
     bool operator<(const DistanceIndex& dist_index) const
     {
         return (dist_ < dist_index.dist_) || ((dist_ == dist_index.dist_) && index_ < dist_index.index_);
     }
     DistanceType dist_;
     size_t index_;
+    int tree_;
 };
 
 
@@ -86,10 +97,11 @@ public:
 
     virtual bool full() const = 0;
 
-    virtual void addPoint(DistanceType dist, size_t index) = 0;
+    virtual void addPoint(DistanceType dist, size_t index, int tree = 0) = 0;
 
     virtual DistanceType worstDist() const = 0;
-
+    
+    virtual void getTrees(std::vector<int> &result) {};
 };
 
 /**
@@ -148,7 +160,7 @@ public:
      * @param dist distance to point
      * @param index index of point
      */
-    void addPoint(DistanceType dist, size_t index)
+    void addPoint(DistanceType dist, size_t index, int tree = 0)
     {
     	if (dist>=worst_distance_) return;
 
@@ -167,6 +179,7 @@ public:
         }
         dist_index_[i].dist_ = dist;
         dist_index_[i].index_ = index;
+        dist_index_[i].tree_ = tree;
         worst_distance_ = dist_index_[capacity_-1].dist_;
     }
 
@@ -191,6 +204,12 @@ public:
     	return worst_distance_;
     }
 
+    void getTrees(std::vector<int> &result) {
+      size_t n = dist_index_.size();
+      for(size_t i = 0; i < n; ++i) {
+          result.push_back(dist_index_[i].tree_);
+      }
+    };
 private:
     size_t capacity_;
     size_t count_;
@@ -240,7 +259,7 @@ public:
     }
 
 
-    void addPoint(DistanceType dist, size_t index)
+    void addPoint(DistanceType dist, size_t index, int tree = 0)
     {
         if (dist >= worst_distance_) return;
         size_t i;
@@ -266,6 +285,7 @@ public:
         }
         dist_index_[i].dist_ = dist;
         dist_index_[i].index_ = index;
+        dist_index_[i].tree_ = tree;
         worst_distance_ = dist_index_[capacity_-1].dist_;
     }
 
@@ -352,7 +372,7 @@ public:
      * @param index index of point
      * Pre-conditions: capacity_>0
      */
-    void addPoint(DistanceType dist, size_t index)
+    void addPoint(DistanceType dist, size_t index, int tree = 0)
     {
     	if (dist>=worst_dist_) return;
 
@@ -472,11 +492,11 @@ public:
      * @param index index of point
      * Pre-conditions: capacity_>0
      */
-    void addPoint(DistanceType dist, size_t index)
+    void addPoint(DistanceType dist, size_t index, int tree = 0)
     {
     	if (dist<radius_) {
     		// add new element
-    		dist_index_.push_back(DistIndex(dist,index));
+    		dist_index_.push_back(DistIndex(dist,index, tree));
     	}
     }
 
@@ -575,7 +595,7 @@ public:
      * @param index index of point
      * Pre-conditions: capacity_>0
      */
-    void addPoint(DistanceType dist, size_t index)
+    void addPoint(DistanceType dist, size_t index, int tree = 0)
     {
     	if (dist>=worst_dist_) return;
 
@@ -680,7 +700,7 @@ public:
         return true;
     }
 
-    void addPoint(DistanceType dist, size_t index)
+    void addPoint(DistanceType dist, size_t index, int tree = 0)
     {
         if (dist<radius) {
             count++;
@@ -707,7 +727,11 @@ public:
     struct DistIndex
     {
         DistIndex(DistanceType dist, unsigned int index) :
-            dist_(dist), index_(index)
+            dist_(dist), index_(index), tree_(0)
+        {
+        }
+        DistIndex(DistanceType dist, unsigned int index, int tree = 0) :
+            dist_(dist), index_(index), tree_(tree)
         {
         }
         bool operator<(const DistIndex dist_index) const
@@ -716,6 +740,7 @@ public:
         }
         DistanceType dist_;
         unsigned int index_;
+        int tree_;
     };
 
     /** Default cosntructor */
@@ -798,11 +823,11 @@ public:
      * @param dist distance for that neighbor
      * @param index index of that neighbor
      */
-    inline void addPoint(DistanceType dist, size_t index)
+    inline void addPoint(DistanceType dist, size_t index, int tree = 0)
     {
         // Don't do anything if we are worse than the worst
         if (dist >= worst_distance_) return;
-        dist_indices_.insert(DistIndex(dist, index));
+        dist_indices_.insert(DistIndex(dist, index, tree));
 
         if (is_full_) {
             if (dist_indices_.size() > capacity_) {
@@ -857,9 +882,9 @@ public:
      * @param dist distance for that neighbor
      * @param index index of that neighbor
      */
-    void addPoint(DistanceType dist, size_t index)
+    void addPoint(DistanceType dist, size_t index, int tree = 0)
     {
-        if (dist < radius_) dist_indices_.insert(DistIndex(dist, index));
+        if (dist < radius_) dist_indices_.insert(DistIndex(dist, index, tree));
     }
 
     /** Remove all elements in the set

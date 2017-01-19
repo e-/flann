@@ -167,7 +167,7 @@ public:
             }
         }        
         
-        float div = (float)size_ * std::log(size_) / 0.693147f;
+        float div = (float)size_ * std::log(size_) / 0.693147f; // ln(2)
         for(int j = 0; j < trees_; j++){
             float inbalance = (float)depth_sums_[j] / div; 
 //            std::cout << inbalance << ' ';
@@ -309,6 +309,9 @@ protected:
      */
     void buildOneIndexImpl(int n)
     {
+        // free previous one
+        if (tree_roots_[n] != NULL) tree_roots_[n]->~Node();
+
         // Create a permutable array of indices to the input vectors.
     	  std::vector<int> ind(size_);
         for (size_t i = 0; i < size_; ++i) {

@@ -361,11 +361,11 @@ private:
       * The child nodes.
       */
       Node* child1, *child2;
-      int children;
+//      int children;
       Node(){
         child1 = NULL;
         child2 = NULL;
-        children = 0;
+//        children = 0;
       }
       ~Node() {
         if (child1 != NULL) { child1->~Node(); child1 = NULL; }
@@ -475,7 +475,7 @@ private:
         /* If too few exemplars remain, then make this a leaf node. */
         if (count == 1) {
             node->child1 = node->child2 = NULL;    /* Mark as leaf node. */
-            node -> children = 1;
+//            node -> children = 1;
             node->divfeat = *ind;    /* Store index of this vec. */
             node->point = points_[*ind];
         }
@@ -490,7 +490,7 @@ private:
 
             node->divfeat = cutfeat;
             node->divval = cutval;
-            node->children = count;
+//            node->children = count;
 //            std::cerr << "divide tree count = " << count << " into (" << idx << "," << count - idx << ")"<< std::endl;
             node->child1 = divideTree(ind, idx, depth_sum);
             node->child2 = divideTree(ind+idx, count-idx, depth_sum);
@@ -731,7 +731,7 @@ private:
 
         /* Search once through each tree down to root. */
         for (i = 0; i < trees_; ++i) {
-            searchLevel<with_removed>(result, vec, tree_roots_[i]/*, 0*/, i, checkCount, maxCheck, epsError, heap, checked);
+            searchLevel<with_removed>(result, vec, tree_roots_[i], 0,/* i,*/ checkCount, maxCheck, epsError, heap, checked);
         }
 
         /* Keep searching other branches from heap until finished. */

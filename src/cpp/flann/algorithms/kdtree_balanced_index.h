@@ -170,7 +170,7 @@ public:
         float div = (float)size_ * std::log(size_) / 0.693147f; // ln(2)
         for(int j = 0; j < trees_; j++){
             float inbalance = (float)depth_sums_[j] / div; 
-//            std::cout << inbalance << ' ';
+            std::cout << inbalance << '\t';
             if(inbalance > rebalance_threshold_) {
               buildOneIndexImpl(j);
             }
@@ -291,7 +291,7 @@ protected:
         delete depth_sums_; 
         depth_sums_ = new int[trees_];
         for(size_t i = 0; i < trees_; ++i) depth_sums_[i] = 0;
-
+        float div = (float)size_ * std::log(size_) / 0.693147f; // ln(2)
         /* Construct the randomized trees. */
         for (int i = 0; i < trees_; i++) {
             /* Randomize the order of vectors to allow for unbiased sampling. */
@@ -299,6 +299,8 @@ protected:
             int depth_sum = 0;
             tree_roots_[i] = divideTree(&ind[0], int(size_), depth_sum);
             depth_sums_[i] = depth_sum;
+            float inbalance = (float)depth_sum / div; 
+            std::cout << inbalance << '\t';
         }
         delete[] mean_;
         delete[] var_;

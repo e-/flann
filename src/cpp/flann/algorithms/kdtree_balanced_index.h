@@ -51,6 +51,8 @@
 #include "flann/util/saving.h"
 
 
+#define MAX(a, b) ((a) > (b)) ? (a) : (b)
+
 namespace flann
 {
 
@@ -159,18 +161,20 @@ public:
         }
         else */{
             for (int j = 0; j < trees_; j++) {
+                temp_max_height_ = max_height_[j];
                 for (size_t i=old_size;i<size_;++i) {
                     int depth = addPointToTree(tree_roots_[j], i);
-
                     depth_sums_[j] += depth;
                 }
+                max_height_[j] = temp_max_height_;
             }
         }        
         
         float div = (float)size_ * std::log(size_) / 0.693147f; // ln(2)
         for(int j = 0; j < trees_; j++){
             float inbalance = (float)depth_sums_[j] / div; 
-            std::cout << inbalance << '\t';
+            //std::cout << inbalance << '\t';
+            std::cout << max_height_[j] << '\t';
             if(inbalance > rebalance_threshold_) {
               buildOneIndexImpl(j);
             }
@@ -273,7 +277,7 @@ protected:
     void buildIndexImpl()
     {
         // Create a permutable array of indices to the input vectors.
-    	std::vector<int> ind(size_);
+    	  std::vector<int> ind(size_);
         for (size_t i = 0; i < size_; ++i) {
             ind[i] = int(i);
         }
@@ -282,6 +286,7 @@ protected:
         var_ = new DistanceType[veclen_];
 
         tree_roots_.resize(trees_);
+        max_height_.resize(trees_);
         //hits_.resize(trees_);
         /*delete hits_;
         hits_ = new int[trees_];
@@ -296,11 +301,15 @@ protected:
         for (int i = 0; i < trees_; i++) {
             /* Randomize the order of vectors to allow for unbiased sampling. */
             std::random_shuffle(ind.begin(), ind.end());
+            
+            temp_max_height_ = 0;
             int depth_sum = 0;
             tree_roots_[i] = divideTree(&ind[0], int(size_), depth_sum);
+            max_height_[i] = temp_max_height_;
             depth_sums_[i] = depth_sum;
             float inbalance = (float)depth_sum / div; 
-            std::cout << inbalance << '\t';
+            //std::cout << inbalance << '\t';
+            std::cout << max_height_[i] << '\t';
         }
         delete[] mean_;
         delete[] var_;
@@ -328,8 +337,10 @@ protected:
         /* Randomize the order of vectors to allow for unbiased sampling. */
         std::random_shuffle(ind.begin(), ind.end());
         int depth_sum = 0;
+        temp_max_height_ = 0;
         tree_roots_[n] = divideTree(&ind[0], int(size_), depth_sum);
         depth_sums_[n] = depth_sum;
+        max_height_[n] = temp_max_height_;
         
         delete[] mean_;
         delete[] var_;
@@ -367,9 +378,11 @@ private:
       */
       Node* child1, *child2;
 //      int children;
+      int height;
       Node(){
         child1 = NULL;
         child2 = NULL;
+        height = 1;
 //        children = 0;
       }
       ~Node() {
@@ -483,6 +496,7 @@ private:
 //            node -> children = 1;
             node->divfeat = *ind;    /* Store index of this vec. */
             node->point = points_[*ind];
+            node->height = 1;
         }
         else {
             int idx;
@@ -499,6 +513,9 @@ private:
 //            std::cerr << "divide tree count = " << count << " into (" << idx << "," << count - idx << ")"<< std::endl;
             node->child1 = divideTree(ind, idx, depth_sum);
             node->child2 = divideTree(ind+idx, count-idx, depth_sum);
+            node->height = MAX(node->child1->height, node->child2->height);
+            if(node->height > temp_max_height_)
+              temp_max_height_ = node->height;
         }
 
         return node;
@@ -891,6 +908,7 @@ private:
             node->divval = (point[div_feat]+leaf_point[div_feat])/2;
             node->child1 = left;
             node->child2 = right;
+            node->height = 2;
 
 /*            left -> children = 1;
             right -> children = 1;
@@ -898,12 +916,19 @@ private:
             return 2; 
         }
         else {
+            int depth;
             if (point[node->divfeat]<node->divval) {
-                return addPointToTree(node->child1,ind) + 1;
+                depth = addPointToTree(node->child1,ind) + 1;
             }
             else {
-                return addPointToTree(node->child2,ind) + 1; 
+                depth = addPointToTree(node->child2,ind) + 1; 
             }
+
+            node->height = MAX(node->child1->height, node->child2->height) + 1;
+            if(node->height > temp_max_height_)
+                temp_max_height_ = node->height;
+
+            return depth;
 
             /*int children1 = node -> child1 -> children;
             int children2 = node -> child2 -> children;
@@ -958,6 +983,8 @@ private:
      * Array of k-d trees used to find neighbours.
      */
     std::vector<NodePtr> tree_roots_;
+    std::vector<int> max_height_;
+    int temp_max_height_;
     //int *hits_ = NULL;
     int *depth_sums_ = NULL;
     /**

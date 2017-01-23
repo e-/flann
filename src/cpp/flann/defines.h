@@ -150,12 +150,12 @@ enum flann_checks_t {
     FLANN_CHECKS_AUTOTUNED = -2,
 };
 
-enum flann_split_criteria { 
+enum flann_split_criteria_t { 
     FLANN_MEAN = 1,
     FLANN_MEDIAN = 2
 };
 
-enum flann_update_criteria {
+enum flann_update_criteria_t {
     FLANN_AVERAGE_DEPTH = 1,
     FLANN_HEIGHT_DIFFERENCE = 2
 };

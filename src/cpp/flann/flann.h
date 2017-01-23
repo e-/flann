@@ -78,8 +78,8 @@ struct FLANNParameters
     
     /* balanced kdtree parameters */
     float rebalance_threshold;
-    int split_criteria;
-    int update_criteria;
+    enum flann_split_criteria_t split_criteria;
+    enum flann_update_criteria_t update_criteria;
 };
 
 

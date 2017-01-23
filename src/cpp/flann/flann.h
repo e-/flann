@@ -79,6 +79,7 @@ struct FLANNParameters
     /* balanced kdtree parameters */
     float rebalance_threshold;
     int split_criteria;
+    int update_criteria;
 };
 
 

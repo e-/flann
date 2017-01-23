@@ -89,6 +89,7 @@ enum flann_algorithm_t
     FLANN_INDEX_KDTREE_CUDA 	= 7,
 #endif
     FLANN_INDEX_KDTREE_BALANCED = 8,
+    FLANN_INDEX_ANNOY = 9,
     FLANN_INDEX_SAVED 			= 254,
     FLANN_INDEX_AUTOTUNED 		= 255,
 };
@@ -152,6 +153,11 @@ enum flann_checks_t {
 enum flann_split_criteria { 
     FLANN_MEAN = 1,
     FLANN_MEDIAN = 2
+};
+
+enum flann_update_criteria {
+    FLANN_AVERAGE_DEPTH = 1,
+    FLANN_HEIGHT_DIFFERENCE = 2
 };
 
 #ifdef __cplusplus

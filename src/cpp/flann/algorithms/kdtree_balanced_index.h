@@ -100,6 +100,8 @@ public:
         rebalance_threshold_ = get_param(index_params_,"rebalance_threshold", 1.1f);
         split_criteria_ = get_param(index_params_,"split_cliteria", FLANN_MEAN);
         update_criteria_ = get_param(index_params_,"update_cliteria", FLANN_HEIGHT_DIFFERENCE);
+
+        depth_sums_ = NULL;
     }
 
 
@@ -117,6 +119,8 @@ public:
         rebalance_threshold_ = get_param(index_params_,"rebalance_threshold", 1.1f);
         split_criteria_ = get_param(index_params_,"split_cliteria", FLANN_MEAN);
         update_criteria_ = get_param(index_params_,"update_cliteria", FLANN_HEIGHT_DIFFERENCE);
+        
+        depth_sums_ = NULL;
 
         setDataset(dataset);
     }
@@ -124,6 +128,8 @@ public:
     KDTreeBalancedIndex(const KDTreeBalancedIndex& other) : BaseClass(other),
     		trees_(other.trees_)
     {
+        depth_sums_ = NULL;
+
         tree_roots_.resize(other.tree_roots_.size());
         //hits_.resize(other.tree_roots_.size());
         for (size_t i=0;i<tree_roots_.size();++i) {
@@ -307,7 +313,7 @@ protected:
         for(size_t i = 0; i < trees_; ++i) hits_[i] = 0;
        */
 
-        delete depth_sums_; 
+        if(depth_sums_ != NULL) delete depth_sums_; 
         depth_sums_ = new int[trees_];
         for(size_t i = 0; i < trees_; ++i) depth_sums_[i] = 0;
         

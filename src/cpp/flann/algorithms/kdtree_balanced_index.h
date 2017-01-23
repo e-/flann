@@ -313,7 +313,7 @@ protected:
         for(size_t i = 0; i < trees_; ++i) hits_[i] = 0;
        */
 
-        if(depth_sums_ != NULL) delete depth_sums_; 
+        if(depth_sums_ != NULL) delete[] depth_sums_; 
         depth_sums_ = new int[trees_];
         for(size_t i = 0; i < trees_; ++i) depth_sums_[i] = 0;
         

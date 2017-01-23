@@ -42,6 +42,7 @@
 #include "flann/algorithms/lsh_index.h"
 #include "flann/algorithms/autotuned_index.h"
 #include "flann/algorithms/kdtree_balanced_index.h"
+#include "flann/algorithms/annoy_index.h"
 
 #ifdef FLANN_USE_CUDA
 #include "flann/algorithms/kdtree_cuda_3d_index.h"
@@ -187,6 +188,9 @@ inline NNIndex<Distance>*
   case FLANN_INDEX_KDTREE_BALANCED:
 		nnIndex = create_index_<KDTreeBalancedIndex,Distance,ElementType>(dataset, params, distance);
 		break;
+  case FLANN_INDEX_ANNOY:
+    nnIndex = create_index_<AnnoyIndex,Distance,ElementType>(dataset, params, distance);
+    break;
 	default:
 		throw FLANNException("Unknown index type");
 	}

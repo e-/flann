@@ -58,7 +58,7 @@ namespace flann
 
 struct KDTreeBalancedIndexParams : public IndexParams
 {
-    KDTreeBalancedIndexParams(int trees = 4, float rebalance_threshold = 1.1f, int update_criteria = FLANN_HEIGHT_DIFFERENCE, int split_criteria = FLANN_MEAN)
+    KDTreeBalancedIndexParams(int trees = 4, float rebalance_threshold = 1.1f, flann_update_criteria_t update_criteria = FLANN_HEIGHT_DIFFERENCE, flann_split_criteria_t split_criteria = FLANN_MEAN)
     {
         (*this)["algorithm"] = FLANN_INDEX_KDTREE_BALANCED;
         (*this)["trees"] = trees;
@@ -97,9 +97,9 @@ public:
     	BaseClass(params, d), mean_(NULL), var_(NULL)
     {
         trees_ = get_param(index_params_,"trees",4);
-        rebalance_threshold_ = get_param(index_params_,"rebalance_threshold", 1.1f);
-        split_criteria_ = get_param(index_params_,"split_cliteria", FLANN_MEAN);
-        update_criteria_ = get_param(index_params_,"update_cliteria", FLANN_HEIGHT_DIFFERENCE);
+        rebalance_threshold_ = get_param<float>(index_params_,"rebalance_threshold", 1.1f);
+        split_criteria_ = get_param<flann_split_criteria_t>(index_params_,"split_criteria", FLANN_MEAN);
+        update_criteria_ = get_param<flann_update_criteria_t>(index_params_,"update_criteria", FLANN_HEIGHT_DIFFERENCE);
 
         depth_sums_ = NULL;
     }
@@ -116,10 +116,10 @@ public:
                 Distance d = Distance() ) : BaseClass(params,d ), mean_(NULL), var_(NULL)
     {
         trees_ = get_param(index_params_,"trees",4);
-        rebalance_threshold_ = get_param(index_params_,"rebalance_threshold", 1.1f);
-        split_criteria_ = get_param(index_params_,"split_cliteria", FLANN_MEAN);
-        update_criteria_ = get_param(index_params_,"update_cliteria", FLANN_HEIGHT_DIFFERENCE);
-        
+        rebalance_threshold_ = get_param<float>(index_params_,"rebalance_threshold", 1.1f);
+        split_criteria_ = get_param<flann_split_criteria_t>(index_params_,"split_criteria", FLANN_MEAN);
+        update_criteria_ = get_param<flann_update_criteria_t>(index_params_,"update_criteria", FLANN_HEIGHT_DIFFERENCE);
+
         depth_sums_ = NULL;
 
         setDataset(dataset);
@@ -307,11 +307,6 @@ protected:
 
         tree_roots_.resize(trees_);
         max_height_.resize(trees_);
-        //hits_.resize(trees_);
-        /*delete hits_;
-        hits_ = new int[trees_];
-        for(size_t i = 0; i < trees_; ++i) hits_[i] = 0;
-       */
 
         if(depth_sums_ != NULL) delete[] depth_sums_; 
         depth_sums_ = new int[trees_];
@@ -391,7 +386,7 @@ private:
     	/**
          * Dimension used for subdivision.
          */
-      short divfeat;
+      int divfeat;
         /**
          * The values used for subdivision.
          */
@@ -1001,8 +996,8 @@ private:
      */
     int trees_;
     float rebalance_threshold_;
-    int split_criteria_;
-    int update_criteria_;
+    flann_split_criteria_t split_criteria_;
+    flann_update_criteria_t update_criteria_;
 
     DistanceType* mean_;
     DistanceType* var_;
@@ -1013,7 +1008,6 @@ private:
     std::vector<NodePtr> tree_roots_;
     std::vector<int> max_height_;
     int temp_max_height_;
-    //int *hits_ = NULL;
     int *depth_sums_ = NULL;
     /**
      * Pooled memory allocator.

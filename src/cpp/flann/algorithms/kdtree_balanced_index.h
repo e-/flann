@@ -179,7 +179,7 @@ public:
             }
         }        
         
-        if(split_criteria_ == FLANN_AVERAGE_DEPTH) { 
+        if(update_criteria_ == FLANN_AVERAGE_DEPTH) { 
             float div = (float)size_ * std::log(size_) / 0.693147f; // ln(2)
             for(int j = 0; j < trees_; j++){
                 float inbalance = (float)depth_sums_[j] / div; 
@@ -189,7 +189,7 @@ public:
                 }
             }
         }
-        else if(split_criteria_ == FLANN_HEIGHT_DIFFERENCE) {
+        else if(update_criteria_ == FLANN_HEIGHT_DIFFERENCE) {
             float div = std::log(size_) / 0.693147f; // ln(2)
             for(int j = 0; j < trees_; j++){
                 float inbalance = (float)max_height_[j] / div;
@@ -332,7 +332,7 @@ protected:
                 float div = (float)size_ * std::log(size_) / 0.693147f; // ln(2)
                 inbalance = (float)depth_sums_[i] / div;
             }
-            else {
+            else if(update_criteria_ == FLANN_HEIGHT_DIFFERENCE){
                 float div = std::log(size_) / 0.693147f; // ln(2)
                 inbalance = (float)max_height_[i] / div;
             }
@@ -1014,7 +1014,7 @@ private:
     std::vector<int> max_height_;
     int temp_max_height_;
     //int *hits_ = NULL;
-    int *depth_sums_;
+    int *depth_sums_ = NULL;
     /**
      * Pooled memory allocator.
      *

@@ -77,8 +77,7 @@ public:
 
     typedef NNIndex<Distance> BaseClass;
 
-    typedef bool needs_kdtree_distance;
-
+    //typedef bool needs_kdtree_distance;
 
     /**
      * Annoy constructor
@@ -139,7 +138,7 @@ public:
 
     using BaseClass::buildIndex;
     
-    void addPoints(const Matrix<ElementType>& points, float rebuild_threshold = 2)
+    void addPoints(const Matrix<ElementType>& points, float rebuild_threshold = 2) // TODO
     {
         assert(points.cols==veclen_);
 
@@ -152,7 +151,7 @@ public:
         else {
             for (size_t i=old_size;i<size_;++i) {
                 for (int j = 0; j < trees_; j++) {
-                    addPointToTree(tree_roots_[j], i);
+                    addPointToTree(tree_roots_[j], i); // inappropriate for annoy? 
                 }
             }
         }        
@@ -250,10 +249,10 @@ protected:
     /**
      * Builds the index
      */
-    void buildIndexImpl()
+    void buildIndexImpl() // TODO
     {
         // Create a permutable array of indices to the input vectors.
-    	std::vector<int> ind(size_);
+    	  std::vector<int> ind(size_);
         for (size_t i = 0; i < size_; ++i) {
             ind[i] = int(i);
         }
@@ -264,10 +263,9 @@ protected:
         tree_roots_.resize(trees_);
         /* Construct the randomized trees. */
         for (int i = 0; i < trees_; i++) {
-            /* Randomize the order of vectors to allow for unbiased sampling. */
-            std::random_shuffle(ind.begin(), ind.end());
-            tree_roots_[i] = divideTree(&ind[0], int(size_) );
+            tree_roots_[i] = divideTree(ind);
         }
+
         delete[] mean_;
         delete[] var_;
     }
@@ -285,12 +283,15 @@ protected:
 private:
 
     /*--------------------- Internal Data Structures --------------------------*/
-    struct Node
+    struct Node // TODO
     {
     	/**
          * Dimension used for subdivision.
          */
         int divfeat;
+        DistanceType a;
+        int children;
+
         /**
          * The values used for subdivision.
          */
@@ -376,7 +377,7 @@ private:
      *                  first = index of the first vector
      *                  last = index of the last vector
      */
-    NodePtr divideTree(int* ind, int count)
+    NodePtr divideTree(const vector<int>& indices) // TODO
     {
         NodePtr node = new(pool_) Node(); // allocate memory
 
@@ -570,7 +571,7 @@ private:
      */
     template<bool with_removed>
     void searchLevel(ResultSet<DistanceType>& result_set, const ElementType* vec, NodePtr node, DistanceType mindist, int& checkCount, int maxCheck,
-                     float epsError, Heap<BranchSt>* heap, DynamicBitset& checked) const
+                     float epsError, Heap<BranchSt>* heap, DynamicBitset& checked) const // TODO
     {
         if (result_set.worstDist()<mindist) {
             //			printf("Ignoring branch, too far\n");
@@ -659,7 +660,7 @@ private:
         }
     }
     
-    void addPointToTree(NodePtr node, int ind)
+    void addPointToTree(NodePtr node, int ind) // TODO
     {
         ElementType* point = points_[ind];
         

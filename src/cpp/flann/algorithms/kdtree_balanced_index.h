@@ -105,7 +105,6 @@ public:
         update_criteria_ = get_param<flann_update_criteria_t>(index_params_,"update_criteria", FLANN_HEIGHT_DIFFERENCE);
     }
 
-
     /**
      * KDTreeBalanced constructor
      *
@@ -130,7 +129,7 @@ public:
     {
         tree_roots_.resize(other.tree_roots_.size());
         for (size_t i=0;i<tree_roots_.size();++i) {
-        	copyTree(tree_roots_[i], other.tree_roots_[i]);
+            copyTree(tree_roots_[i], other.tree_roots_[i]);
         }
     }
 
@@ -180,7 +179,7 @@ public:
                 imbalance = (float)max_height_[j] / div;
             }
  
-            std::cout << imbalance << '\t';
+            std::cout << imbalance << '\t'; // TODO: remove this line 
 
             if(imbalance > rebuild_threshold_ && size_at_rebuild_[j] > 0 && (float)size_ / size_at_rebuild_[j] > rebuild_size_threshold_)
                 buildIndexOne(j);
@@ -298,7 +297,7 @@ protected:
                 float div = std::log(size_) / LOG2;
                 imbalance = (float)max_height_[i] / div;
             }
-            std::cout << imbalance << '\t';
+            std::cout << imbalance << '\t'; // TODO: remove this line
         }
     }
 
@@ -352,7 +351,7 @@ private:
     	/**
          * Dimension used for subdivision.
          */
-      int divfeat;
+      int divfeat; // DO NOT change the type int. It seems it affects archive logic, causing segfault on Linux systems.
         /**
          * The values used for subdivision.
          */
@@ -447,7 +446,6 @@ private:
         /* If too few exemplars remain, then make this a leaf node. */
         if (count == 1) {
             node->child1 = node->child2 = NULL;    /* Mark as leaf node. */
-//            node -> children = 1;
             node->divfeat = *ind;    /* Store index of this vec. */
             node->point = points_[*ind];
             node->height = 1;
@@ -463,8 +461,6 @@ private:
 
             node->divfeat = cutfeat;
             node->divval = cutval;
-//            node->children = count;
-//            std::cerr << "divide tree count = " << count << " into (" << idx << "," << count - idx << ")"<< std::endl;
             node->child1 = divideTree(ind, idx, depth_sum);
             node->child2 = divideTree(ind+idx, count-idx, depth_sum);
             node->height = MAX(node->child1->height, node->child2->height);
@@ -531,7 +527,7 @@ private:
 
     /**
      * Choose which feature to use in order to subdivide this set of vectors.
-     * Make a random choice among those with the highest variance, and use
+     * Make a random choice among those with the highest MAD (median absolute error), and use
      * its variance as the threshold value.
      */
     void medianSplit(int* ind, int count, int& index, int& cutfeat, DistanceType& cutval)
@@ -539,7 +535,7 @@ private:
         memset(mean_,0,veclen_*sizeof(DistanceType));
         memset(var_,0,veclen_*sizeof(DistanceType));
 
-        /* Compute mean values.  Only the first SAMPLE_MEAN values need to be
+        /* Compute median values.  Only the first SAMPLE_MEAN values need to be
             sampled to get a good estimate.
          */
         int cnt = std::min((int)SAMPLE_MEAN+1, count);
@@ -563,7 +559,7 @@ private:
                 var_[k] += dist;
             }
         }
-        /* Select one of the highest variance indices at random. */
+        /* Select one of the highest MAD indices at random. */
         cutfeat = selectDivision(var_);
         cutval = mean_[cutfeat];
 

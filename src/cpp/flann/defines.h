@@ -150,10 +150,23 @@ enum flann_checks_t {
     FLANN_CHECKS_AUTOTUNED = -2,
 };
 
+/***
+ *  split criteria for KDBalancedTree
+ *  FLANN_MEAN: use mean and stdev of sampled points to split tree nodes
+ *  FLANN_MEDIAN: use median and median abosolute error of the points to split the nodes
+ *  It is recommended to use FLANN_MEAN (default) since we could not find significant benefits of using median.
+ */
+
 enum flann_split_criteria_t { 
-    FLANN_MEAN = 1,
+    FLANN_MEAN = 1, 
     FLANN_MEDIAN = 2
 };
+
+/***
+ *  update criteria for KDBalancedTrees
+ *  FLANN_HEIGHT_DIFFERENCE: max(height(left_subtree) - height(right-subtree)) / lg(# of points) is calculated for each tree, and when the measure exceeds a specific threshold (given as parameters) the corressponding tree is reconstructed.
+ *  FLANN_AVERAGE_DEPTH: the average depth of nodes / lg(# of points) is measured for each tree instead.
+ */
 
 enum flann_update_criteria_t {
     FLANN_HEIGHT_DIFFERENCE = 1,

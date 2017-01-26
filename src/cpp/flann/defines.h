@@ -156,8 +156,8 @@ enum flann_split_criteria_t {
 };
 
 enum flann_update_criteria_t {
-    FLANN_AVERAGE_DEPTH = 1,
-    FLANN_HEIGHT_DIFFERENCE = 2
+    FLANN_HEIGHT_DIFFERENCE = 1,
+    FLANN_AVERAGE_DEPTH = 2,
 };
 
 #ifdef __cplusplus

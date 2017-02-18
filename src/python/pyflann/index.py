@@ -181,7 +181,7 @@ class FLANN(object):
 
         return params
 
-    def add_points(self, pts):
+    def add_points(self, pts, rebuild_threshold = 2.0):
         """
         This adds points pts to the internall stored index.
         """
@@ -201,9 +201,9 @@ class FLANN(object):
         if self.__curindex is None:
             raise FLANNException('No index found. You must call build_index first!')
         
-        self.add_points[pts.dtype.type](
+        flann.add_points[pts.dtype.type](
             self.__curindex,
-            pts, npts, dim)
+            pts, npts, dim, rebuild_threshold)
 
     def save_index(self, filename):
         """

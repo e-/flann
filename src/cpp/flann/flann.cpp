@@ -38,7 +38,9 @@ struct FLANNParameters DEFAULT_FLANN_PARAMETERS = {
     4, 4,
     32, 11, FLANN_CENTERS_RANDOM, 0.2f,
     0.9f, 0.01f, 0, 0.1f,
-    FLANN_LOG_NONE, 0
+    1, 1, 0,
+    FLANN_LOG_NONE, 0, 
+    1.3f, 1.1f, FLANN_MEAN, FLANN_AVERAGE_DEPTH
 };
 
 

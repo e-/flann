@@ -181,6 +181,30 @@ class FLANN(object):
 
         return params
 
+    def add_points(self, pts):
+        """
+        This adds points pts to the internall stored index.
+        """
+
+        if pts.dtype.type not in allowed_types:
+            raise FLANNException('Cannot handle type: %s' % pts.dtype)
+        
+        if pts.dtype.type != self.__curindex_type:
+            raise FLANNException('Data type is different: [%s, %s]' % (pts.dtype.type, self.__curindex_type))
+
+        pts = ensure_2d_array(pts, default_flags)
+        npts, dim = pts.shape
+        
+        if dim != self.__curindex_data.shape[1]:
+            raise FLANNException('Dimension must be the same: [%d, %d]' % (dim, self.__curindex_data.shape[2]))
+
+        if self.__curindex is None:
+            raise FLANNException('No index found. You must call build_index first!')
+        
+        self.add_points[pts.dtype.type](
+            self.__curindex,
+            pts, npts, dim)
+
     def save_index(self, filename):
         """
         This saves the index to a disk file.

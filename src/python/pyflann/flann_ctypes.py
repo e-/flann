@@ -109,6 +109,10 @@ class FLANNParameters(CustomStructure):
         ('multi_probe_level_', c_uint),
         ('log_level', c_int),
         ('random_seed', c_long),
+        ('rebuild_imbalance_threshold', c_float),
+        ('rebuild_size_threshold', c_float),
+        ('split_method', c_int),
+        ('imbalance_measure', c_int)
     ]
     _defaults_ = {
         'algorithm' : 'kdtree',
@@ -131,10 +135,14 @@ class FLANNParameters(CustomStructure):
         'key_size_': 20,
         'multi_probe_level_': 2,
         'log_level' : 'warning',
-        'random_seed' : -1
+        'random_seed' : -1,
+        'rebuild_imbalance_threshold' : 1.1,
+        'rebuild_size_threshold' : 1.2,
+        'split_method': 1,
+        'imbalance_measure': 2
     }
     _translation_ = {
-        'algorithm'     : {'linear'    : 0, 'kdtree'    : 1, 'kmeans'    : 2, 'composite' : 3, 'kdtree_single' : 4, 'hierarchical': 5, 'lsh': 6, 'saved': 254, 'autotuned' : 255, 'default'   : 1},
+        'algorithm'     : {'linear'    : 0, 'kdtree'    : 1, 'kmeans'    : 2, 'composite' : 3, 'kdtree_single' : 4, 'hierarchical': 5, 'lsh': 6, 'kdtree_balanced': 8, 'saved': 254, 'autotuned' : 255, 'default'   : 1},
         'centers_init'  : {'random'    : 0, 'gonzales'  : 1, 'kmeanspp'  : 2, 'default'   : 0},
         'log_level'     : {'none'      : 0, 'fatal'     : 1, 'error'     : 2, 'warning'   : 3, 'info'      : 4, 'default'   : 2}
     }

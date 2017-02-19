@@ -77,10 +77,10 @@ struct FLANNParameters
     long random_seed;            /* random seed to use */
     
     /* balanced kdtree parameters */
-    float rebuild_threshold;
+    float rebuild_imbalance_threshold;
     float rebuild_size_threshold;
-    enum flann_split_criteria_t split_criteria;
-    enum flann_update_criteria_t update_criteria;
+    enum flann_split_method_t split_method;
+    enum flann_imbalance_measure_t imbalance_measure;
 };
 
 

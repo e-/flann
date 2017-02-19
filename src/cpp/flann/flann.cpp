@@ -38,9 +38,9 @@ struct FLANNParameters DEFAULT_FLANN_PARAMETERS = {
     4, 4,
     32, 11, FLANN_CENTERS_RANDOM, 0.2f,
     0.9f, 0.01f, 0, 0.1f,
-    1, 1, 0,
+    12, 20, 2,
     FLANN_LOG_NONE, 0, 
-    1.3f, 1.1f, FLANN_MEAN, FLANN_AVERAGE_DEPTH
+    1.1f, 1.2f, FLANN_MEAN, FLANN_AVERAGE_DEPTH
 };
 
 
@@ -98,6 +98,14 @@ flann::IndexParams create_parameters(FLANNParameters* p)
         params["multi_probe_level"] = p->multi_probe_level_;
     }
 
+    if (p->algorithm == FLANN_INDEX_KDTREE_BALANCED) {
+        params["trees"] = p->trees;
+        params["rebuild_imbalance_threshold"] = p->rebuild_imbalance_threshold;
+        params["rebuild_size_threshold"] = p->rebuild_size_threshold;
+        params["split_method"] = p->split_method;
+        params["imbalance_measure"] = p->imbalance_measure;
+    }
+
     params["log_level"] = p->log_level;
     params["random_seed"] = p->random_seed;
 
@@ -115,7 +123,6 @@ flann::SearchParams create_search_params(FLANNParameters* p)
 
     return params;
 }
-
 
 void update_flann_parameters(const IndexParams& params, FLANNParameters* flann_params)
 {
@@ -163,6 +170,18 @@ void update_flann_parameters(const IndexParams& params, FLANNParameters* flann_p
 	}
 	if (has_param(params,"random_seed")) {
 		flann_params->random_seed = get_param<long>(params,"random_seed");
+	}
+	if (has_param(params,"rebuild_imbalance_threshold")) {
+		flann_params->rebuild_imbalance_threshold = get_param<float>(params,"rebuild_imbalance_threshold");
+	}
+	if (has_param(params,"rebuild_size_threshold")) {
+		flann_params->rebuild_size_threshold = get_param<float>(params,"rebuild_size_threshold");
+	}
+	if (has_param(params,"split_method")) {
+		flann_params->split_method = get_param<flann_split_method_t>(params,"split_method");
+	}
+	if (has_param(params,"imbalance_measure")) {
+		flann_params->imbalance_measure = get_param<flann_imbalance_measure_t>(params,"imbalance_measure");
 	}
 }
 

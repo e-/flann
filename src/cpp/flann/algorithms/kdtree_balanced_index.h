@@ -59,14 +59,14 @@ namespace flann
 
 struct KDTreeBalancedIndexParams : public IndexParams
 {
-    KDTreeBalancedIndexParams(int trees = 4, float rebuild_threshold = 1.1f, float rebuild_size_threshold = 1.2f, flann_update_criteria_t update_criteria = FLANN_HEIGHT_DIFFERENCE, flann_split_criteria_t split_criteria = FLANN_MEAN)
+    KDTreeBalancedIndexParams(int trees = 4, float rebuild_imbalance_threshold = 1.1f, float rebuild_size_threshold = 1.2f, flann_imbalance_measure_t imbalance_measure = FLANN_HEIGHT_DIFFERENCE, flann_split_method_t split_method = FLANN_MEAN)
     {
         (*this)["algorithm"] = FLANN_INDEX_KDTREE_BALANCED;
         (*this)["trees"] = trees;
-        (*this)["rebuild_threshold"] = rebuild_threshold;
+        (*this)["rebuild_imbalance_threshold"] = rebuild_imbalance_threshold;
         (*this)["rebuild_size_threshold"] = rebuild_size_threshold;
-        (*this)["split_criteria"] = split_criteria;
-        (*this)["update_criteria"] = update_criteria;
+        (*this)["split_method"] = split_method;
+        (*this)["imbalance_measure"] = imbalance_measure;
     }
 };
 
@@ -99,10 +99,10 @@ public:
     	BaseClass(params, d), mean_(NULL), var_(NULL)
     {
         trees_ = get_param(index_params_,"trees",4);
-        rebuild_threshold_ = get_param<float>(index_params_,"rebuild_threshold", 1.1f);
+        rebuild_imbalance_threshold_ = get_param<float>(index_params_,"rebuild_imbalance_threshold", 1.1f);
         rebuild_size_threshold_ = get_param<float>(index_params_,"rebuild_size_threshold", 1.2f);
-        split_criteria_ = get_param<flann_split_criteria_t>(index_params_,"split_criteria", FLANN_MEAN);
-        update_criteria_ = get_param<flann_update_criteria_t>(index_params_,"update_criteria", FLANN_HEIGHT_DIFFERENCE);
+        split_method_ = get_param<flann_split_method_t>(index_params_,"split_method", FLANN_MEAN);
+        imbalance_measure_ = get_param<flann_imbalance_measure_t>(index_params_,"imbalance_measure", FLANN_HEIGHT_DIFFERENCE);
     }
 
     /**
@@ -116,10 +116,10 @@ public:
                 Distance d = Distance() ) : BaseClass(params,d ), mean_(NULL), var_(NULL)
     {
         trees_ = get_param(index_params_,"trees",4);
-        rebuild_threshold_ = get_param<float>(index_params_,"rebuild_threshold", 1.1f);
+        rebuild_imbalance_threshold_ = get_param<float>(index_params_,"rebuild_imbalance_threshold", 1.1f);
         rebuild_size_threshold_ = get_param<float>(index_params_,"rebuild_size_threshold", 1.2f);
-        split_criteria_ = get_param<flann_split_criteria_t>(index_params_,"split_criteria", FLANN_MEAN);
-        update_criteria_ = get_param<flann_update_criteria_t>(index_params_,"update_criteria", FLANN_HEIGHT_DIFFERENCE);
+        split_method_ = get_param<flann_split_method_t>(index_params_,"split_method", FLANN_MEAN);
+        imbalance_measure_ = get_param<flann_imbalance_measure_t>(index_params_,"imbalance_measure", FLANN_HEIGHT_DIFFERENCE);
 
         setDataset(dataset);
     }
@@ -170,18 +170,18 @@ public:
             max_height_[j] = temp_max_height_;
 
             float imbalance = 0;
-            if(update_criteria_ == FLANN_AVERAGE_DEPTH) {
+            if(imbalance_measure_ == FLANN_AVERAGE_DEPTH) {
                 float div = (float)size_ * std::log(size_) / LOG2;
                 imbalance = (float)depth_sums_[j] / div;
             }
-            else if(update_criteria_ == FLANN_HEIGHT_DIFFERENCE){
+            else if(imbalance_measure_ == FLANN_HEIGHT_DIFFERENCE){
                 float div = std::log(size_) / LOG2;
                 imbalance = (float)max_height_[j] / div;
             }
  
             std::cout << imbalance << '\t'; // TODO: remove this line 
 
-            if(imbalance > rebuild_threshold_ && size_at_rebuild_[j] > 0 && (float)size_ / size_at_rebuild_[j] > rebuild_size_threshold_)
+            if(imbalance > rebuild_imbalance_threshold_ && size_at_rebuild_[j] > 0 && (float)size_ / size_at_rebuild_[j] > rebuild_size_threshold_)
                 buildIndexOne(j);
         }
     }
@@ -289,11 +289,11 @@ protected:
             buildIndexOne(i);
 
             float imbalance = 0;
-            if(update_criteria_ == FLANN_AVERAGE_DEPTH) {
+            if(imbalance_measure_ == FLANN_AVERAGE_DEPTH) {
                 float div = (float)size_ * std::log(size_) / LOG2;
                 imbalance = (float)depth_sums_[i] / div;
             }
-            else if(update_criteria_ == FLANN_HEIGHT_DIFFERENCE){
+            else if(imbalance_measure_ == FLANN_HEIGHT_DIFFERENCE){
                 float div = std::log(size_) / LOG2;
                 imbalance = (float)max_height_[i] / div;
             }
@@ -454,7 +454,7 @@ private:
             int idx;
             int cutfeat;
             DistanceType cutval;
-            if(split_criteria_ == FLANN_MEAN) 
+            if(split_method_ == FLANN_MEAN) 
                 meanSplit(ind, count, idx, cutfeat, cutval);
             else
                 medianSplit(ind, count, idx, cutfeat, cutval);
@@ -877,10 +877,10 @@ private:
      * Number of randomized trees that are used
      */
     int trees_;
-    float rebuild_threshold_;
+    float rebuild_imbalance_threshold_;
     float rebuild_size_threshold_;
-    flann_split_criteria_t split_criteria_;
-    flann_update_criteria_t update_criteria_;
+    flann_split_method_t split_method_;
+    flann_imbalance_measure_t imbalance_measure_;
     int temp_max_height_;
 
     DistanceType* mean_;

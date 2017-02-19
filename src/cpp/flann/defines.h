@@ -157,7 +157,7 @@ enum flann_checks_t {
  *  It is recommended to use FLANN_MEAN (default) since we could not find significant benefits of using median.
  */
 
-enum flann_split_criteria_t { 
+enum flann_split_method_t { 
     FLANN_MEAN = 1, 
     FLANN_MEDIAN = 2
 };
@@ -168,7 +168,7 @@ enum flann_split_criteria_t {
  *  FLANN_AVERAGE_DEPTH: the average depth of nodes / lg(# of points) is measured for each tree instead.
  */
 
-enum flann_update_criteria_t {
+enum flann_imbalance_measure_t {
     FLANN_HEIGHT_DIFFERENCE = 1,
     FLANN_AVERAGE_DEPTH = 2,
 };
